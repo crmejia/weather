@@ -1,18 +1,18 @@
 package weather_test
 
 import (
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"os"
 	"testing"
 	"weather"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func TestFormatURL(t *testing.T) {
 	t.Parallel()
 	location := "London"
 	token := "dummy_token"
-	want := "??? You need to fill this part in! ???"
+	want := "https://api.openweathermap.org/data/2.5/weather?q=London&appid=dummy_token"
 	got := weather.FormatURL(location, token)
 	if want != got {
 		t.Errorf("want %q, got %q", want, got)
@@ -31,7 +31,7 @@ func TestParseJSON(t *testing.T) {
 		TemperatureCelsius: 7.17,
 	}
 	got := weather.ParseJSON(f)
-	if !cmp.Equal(want, got) {
+	if !cmp.Equal(want, got, cmpopts.EquateApprox(0, 0.001)) {
 		t.Error(cmp.Diff(want, got))
 	}
 }
