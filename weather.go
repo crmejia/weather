@@ -29,6 +29,10 @@ type Conditions struct {
 	TemperatureCelsius float32
 }
 
+func (c Conditions) String() string {
+	return fmt.Sprintf("%s %.1fºC", c.Summary, c.TemperatureCelsius)
+}
+
 func FormatURL(location, token string) string {
 	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", location, token)
 }

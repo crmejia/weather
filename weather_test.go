@@ -1,6 +1,7 @@
 package weather_test
 
 import (
+	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"os"
@@ -61,5 +62,17 @@ func TestLocationFromArgsReturnErrorOnNoLocation(t *testing.T) {
 	_, err := weather.LocationFromArgs([]string{})
 	if err == nil {
 		t.Error("want error on no location")
+	}
+}
+func TestStringerOnConditions(t *testing.T) {
+	cond := weather.Conditions{
+		Summary:            "Drizzle",
+		TemperatureCelsius: 7.2,
+	}
+	want := "Drizzle 7.2ºC"
+	got := fmt.Sprint(cond)
+
+	if want != got {
+		t.Errorf("want %q, got %q", want, got)
 	}
 }
