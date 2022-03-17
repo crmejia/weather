@@ -2,6 +2,7 @@ package weather
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -57,4 +58,23 @@ func Current(location, token string) (Conditions, error) {
 	}
 	cond := ParseJSON(resp.Body)
 	return cond, nil
+}
+
+func LocationFromArgs(input []string) (string, error) {
+	if len(input) == 0 {
+		return "", errors.New("input location cannot be empty")
+	}
+	var output string
+	unparsedComma := false
+	for i, _ := range input {
+		if i > 0 && input[i] != "," && !unparsedComma {
+			output += "%20" + input[i]
+		} else {
+			if input[i] == "," {
+				unparsedComma = true
+			}
+			output += input[i]
+		}
+	}
+	return output, nil
 }
