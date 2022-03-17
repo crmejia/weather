@@ -19,7 +19,7 @@ type coordinates struct {
 	Latitude  float32 `json:"lat"`
 }
 type weather struct {
-	Description string `json:"main""`
+	Description string `json:"main"`
 }
 type main struct {
 	Temp float32
@@ -54,23 +54,13 @@ func ParseJSON(r io.Reader) Conditions {
 	return cond
 }
 
-func Current(location, token string) (Conditions, error) {
-	url := FormatURL(location, token)
-	resp, err := http.Get(url)
-	if err != nil {
-		return Conditions{}, err
-	}
-	cond := ParseJSON(resp.Body)
-	return cond, nil
-}
-
 func LocationFromArgs(input []string) (string, error) {
 	if len(input) == 0 {
 		return "", errors.New("input location cannot be empty")
 	}
 	var output string
 	unparsedComma := false
-	for i, _ := range input {
+	for i := range input {
 		if i > 0 && input[i] != "," && !unparsedComma {
 			output += "%20" + input[i]
 		} else {
@@ -81,4 +71,29 @@ func LocationFromArgs(input []string) (string, error) {
 		}
 	}
 	return output, nil
+}
+
+type Client struct {
+	token      string
+	HttpClient http.Client
+}
+
+func NewClient(token string) Client {
+	return Client{
+		token:      token,
+		HttpClient: http.Client{},
+	}
+}
+
+func (c Client) Token() string {
+	return c.token
+}
+
+func (c Client) Current(url string) (Conditions, error) {
+	resp, err := c.HttpClient.Get(url)
+	if err != nil {
+		return Conditions{}, err
+	}
+	cond := ParseJSON(resp.Body)
+	return cond, nil
 }

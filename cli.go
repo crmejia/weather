@@ -18,7 +18,9 @@ func RunCLI() {
 	if token == "" {
 		log.Fatal("please set the Open Weather API token(OPENWEATHER_API_TOKEN)")
 	}
-	cond, err := Current(location, token)
+	client := NewClient(token)
+	url := FormatURL(location, token)
+	cond, err := client.Current(url)
 	if err != nil {
 		log.Fatal(err)
 	}

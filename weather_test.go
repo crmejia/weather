@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"weather"
@@ -75,4 +79,39 @@ func TestStringerOnConditions(t *testing.T) {
 	if want != got {
 		t.Errorf("want %q, got %q", want, got)
 	}
+}
+
+func TestNewClient(t *testing.T) {
+	token := "dummy_token"
+	c := weather.NewClient(token)
+	got := c.Token()
+	if got != token {
+		t.Errorf("want %q, got %q", token, got)
+	}
+}
+
+func TestClient_Current(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(LoadLondonJSON))
+	token := "dummy_token"
+	wclient := weather.NewClient(token)
+	wclient.HttpClient = *ts.Client()
+	cond, _ := wclient.Current(ts.URL)
+
+	want := "Drizzle 7.2ºC"
+	got := cond.String()
+
+	if want != got {
+		t.Errorf("want %q, got %q", want, got)
+	}
+}
+
+func LoadLondonJSON(w http.ResponseWriter, r *http.Request) {
+	f, err := os.Open("testdata/london.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	fileBytes, _ := ioutil.ReadAll(f)
+
+	w.Write(fileBytes)
 }
