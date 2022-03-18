@@ -5,16 +5,25 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
-const openweather_api_token = "OPENWEATHER_API_TOKEN"
+const (
+	openweather_api_token = "OPENWEATHER_API_TOKEN"
+	unit_usage            = "set the unit: CELCIUS(default), FAHRENHEIT, kelvin"
+	shorthand             = " (shorthand)"
+)
 
 func RunCLI() {
-	unit := flag.String("unit", CELCIUS, "set the unit: CELCIUS(default), FAHRENHEIT, kelvin")
+
+	var unit string
+	flag.StringVar(&unit, "unit", CELCIUS, unit_usage)
+	flag.StringVar(&unit, "u", CELCIUS, unit_usage+shorthand)
 	flag.Parse()
 
-	if *unit != FAHRENHEIT && *unit != "f" && *unit != KELVIN && *unit != "k" {
-		*unit = CELCIUS
+	unit = strings.ToLower(unit)
+	if unit != FAHRENHEIT && unit != "f" && unit != KELVIN && unit != "k" {
+		unit = CELCIUS
 	}
 
 	location, err := LocationFromArgs(flag.Args())
@@ -28,7 +37,7 @@ func RunCLI() {
 	}
 	clientConfig := ClientConfig{
 		Token: token,
-		Unit:  *unit,
+		Unit:  unit,
 	}
 	client := NewClient(clientConfig)
 	url := FormatURL(location, token)
