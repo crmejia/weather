@@ -32,8 +32,8 @@ func TestParseJSON(t *testing.T) {
 	}
 	defer f.Close()
 	want := weather.Conditions{
-		Summary:            "Drizzle",
-		TemperatureCelsius: 7.17,
+		Summary:     "Drizzle",
+		Temperature: 7.17,
 	}
 	got := weather.ParseJSON(f)
 	if !cmp.Equal(want, got, cmpopts.EquateApprox(0, 0.001)) {
@@ -42,6 +42,7 @@ func TestParseJSON(t *testing.T) {
 }
 
 func TestLocationFromArgsParsesLocationsCorrectly(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		input []string
 		want  string
@@ -63,37 +64,75 @@ func TestLocationFromArgsParsesLocationsCorrectly(t *testing.T) {
 }
 
 func TestLocationFromArgsReturnErrorOnNoLocation(t *testing.T) {
+	t.Parallel()
 	_, err := weather.LocationFromArgs([]string{})
 	if err == nil {
 		t.Error("want error on no location")
 	}
 }
 func TestStringerOnConditions(t *testing.T) {
-	cond := weather.Conditions{
-		Summary:            "Drizzle",
-		TemperatureCelsius: 7.2,
-	}
-	want := "Drizzle 7.2ºC"
-	got := fmt.Sprint(cond)
+	t.Parallel()
 
+	testCases := []struct {
+		cond weather.Conditions
+		want string
+	}{
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: "c"}, want: "Drizzle 7.2ºC"},
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.CELCIUS}, want: "Drizzle 7.2ºC"},
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.FAHRENHEIT}, want: "Drizzle 7.2ºF"},
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.KELVIN}, want: "Drizzle 7.2ºK"},
+	}
+
+	for _, tc := range testCases {
+		got := fmt.Sprint(tc.cond)
+		if tc.want != got {
+			t.Errorf("want %q, got %q", tc.want, got)
+		}
+	}
+}
+
+var dummyClientConfig = weather.ClientConfig{
+	Token: "dummy_token",
+}
+
+func TestConditionsConvertToAppropiateUnit(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		cond weather.Conditions
+		want float32
+	}{
+		{cond: weather.Conditions{Temperature: 300, Unit: "c"}, want: 26.85},
+		{cond: weather.Conditions{Temperature: 300, Unit: weather.CELCIUS}, want: 26.85},
+		{cond: weather.Conditions{Temperature: 300, Unit: "k"}, want: 300},
+		{cond: weather.Conditions{Temperature: 300, Unit: weather.KELVIN}, want: 300},
+		{cond: weather.Conditions{Temperature: 300, Unit: "f"}, want: 80.33},
+		{cond: weather.Conditions{Temperature: 300, Unit: weather.FAHRENHEIT}, want: 80.33},
+	}
+
+	for _, tc := range testCases {
+		tc.cond.Convert()
+		got := tc.cond.Temperature
+		if !cmp.Equal(tc.want, got, cmpopts.EquateApprox(0, 0.001)) {
+			t.Errorf("want %.1f, got %.1f", tc.want, got)
+		}
+	}
+}
+
+func TestNewClient(t *testing.T) {
+	t.Parallel()
+	c := weather.NewClient(dummyClientConfig)
+	want := dummyClientConfig.Token
+	got := c.Token()
 	if want != got {
 		t.Errorf("want %q, got %q", want, got)
 	}
 }
 
-func TestNewClient(t *testing.T) {
-	token := "dummy_token"
-	c := weather.NewClient(token)
-	got := c.Token()
-	if got != token {
-		t.Errorf("want %q, got %q", token, got)
-	}
-}
-
 func TestClient_Current(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewTLSServer(http.HandlerFunc(LoadLondonJSON))
-	token := "dummy_token"
-	wclient := weather.NewClient(token)
+
+	wclient := weather.NewClient(dummyClientConfig)
 	wclient.HttpClient = *ts.Client()
 	cond, _ := wclient.Current(ts.URL)
 

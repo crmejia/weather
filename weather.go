@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type responseJSON struct {
@@ -25,19 +26,35 @@ type main struct {
 	Temp float32
 }
 type Conditions struct {
-	Summary            string
-	TemperatureCelsius float32
+	Summary     string
+	Temperature float32
+	Unit        string
 }
 
 func (c Conditions) String() string {
-	return fmt.Sprintf("%s %.1fºC", c.Summary, c.TemperatureCelsius)
+	unit := strings.ToUpper(c.Unit[0:1])
+	return fmt.Sprintf("%s %.1fº%s", c.Summary, c.Temperature, unit)
+}
+
+const kelvinToCelcius = 273.1500
+const (
+	CELCIUS    = "celcius"
+	FAHRENHEIT = "fahrenheit"
+	KELVIN     = "kelvin"
+)
+
+func (c *Conditions) Convert() {
+	if c.Unit == "c" || c.Unit == CELCIUS {
+		c.Temperature -= kelvinToCelcius
+	} else if c.Unit == "f" || c.Unit == FAHRENHEIT {
+		c.Temperature = (c.Temperature-kelvinToCelcius)*9/5 + 32
+	}
+
 }
 
 func FormatURL(location, token string) string {
 	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", location, token)
 }
-
-const kelvinToCelcius = 273.1500
 
 func ParseJSON(r io.Reader) Conditions {
 	decoder := json.NewDecoder(r)
@@ -49,7 +66,7 @@ func ParseJSON(r io.Reader) Conditions {
 	}
 	var cond Conditions
 	cond.Summary = resp.Weather[0].Description
-	cond.TemperatureCelsius = resp.Main.Temp - kelvinToCelcius
+	cond.Temperature = resp.Main.Temp
 
 	return cond
 }
@@ -73,14 +90,21 @@ func LocationFromArgs(input []string) (string, error) {
 	return output, nil
 }
 
+type ClientConfig struct {
+	Token string
+	Unit  string
+}
+
 type Client struct {
 	token      string
 	HttpClient http.Client
+	unit       string
 }
 
-func NewClient(token string) Client {
+func NewClient(config ClientConfig) Client {
 	return Client{
-		token:      token,
+		token:      config.Token,
+		unit:       config.Unit,
 		HttpClient: http.Client{},
 	}
 }
@@ -95,5 +119,7 @@ func (c Client) Current(url string) (Conditions, error) {
 		return Conditions{}, err
 	}
 	cond := ParseJSON(resp.Body)
+	cond.Unit = c.unit
+	cond.Convert()
 	return cond, nil
 }
