@@ -13,15 +13,28 @@ import (
 	"weather"
 )
 
-func TestFormatURL(t *testing.T) {
+func TestFormatURLByLocation(t *testing.T) {
 	t.Parallel()
 	location := "London"
 	token := "dummy_token"
 	want := "https://api.openweathermap.org/data/2.5/weather?q=London&appid=dummy_token"
-	got := weather.FormatURL(location, token)
+	got := weather.FormatURLByLocation(location, token)
 	if want != got {
 		t.Errorf("want %q, got %q", want, got)
 	}
+}
+
+func TestFormatURLByCoordinates(t *testing.T) {
+	t.Parallel()
+	var lon float32 = 33
+	var lat float32 = 44
+	token := "dummy_token"
+	want := "https://api.openweathermap.org/data/2.5/weather?lat=44.00&lon=33.00&appid=dummy_token"
+	got := weather.FormatURLByCoordinates(lat, lon, token)
+	if want != got {
+		t.Errorf("want %q, got %q", want, got)
+	}
+
 }
 
 func TestParseJSON(t *testing.T) {

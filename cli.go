@@ -11,42 +11,57 @@ import (
 const (
 	openweather_api_token = "OPENWEATHER_API_TOKEN"
 	unit_usage            = "set the unit: CELCIUS(default), FAHRENHEIT, kelvin"
-	long_usage            = "gives more weather details"
+	detailed_usage        = "gives more weather details"
+	coord_usage           = "use coordinates to determine weather"
 	shorthand             = " (shorthand)"
 )
 
 func RunCLI() {
-
 	var unit string
 	flag.StringVar(&unit, "unit", CELCIUS, unit_usage)
 	flag.StringVar(&unit, "u", CELCIUS, unit_usage+shorthand)
 
-	var long bool
-	flag.BoolVar(&long, "long", false, long_usage)
-	flag.BoolVar(&long, "l", false, long_usage)
-	flag.Parse()
+	var detailed bool
+	flag.BoolVar(&detailed, "detailed", false, detailed_usage)
+	flag.BoolVar(&detailed, "d", false, detailed_usage)
 
+	var lon float64
+	var lat float64
+	flag.Float64Var(&lon, "longitude", 0, coord_usage)
+	flag.Float64Var(&lon, "lon", 0, coord_usage+shorthand)
+	flag.Float64Var(&lat, "latitude", 0, coord_usage)
+	flag.Float64Var(&lat, "lat", 0, coord_usage+shorthand)
+
+	flag.Parse()
 	unit = strings.ToLower(unit)
 	if unit != FAHRENHEIT && unit != "f" && unit != KELVIN && unit != "k" {
 		unit = CELCIUS
 	}
-
-	location, err := LocationFromArgs(flag.Args())
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	token := os.Getenv(openweather_api_token)
 	if token == "" {
 		log.Fatal("please set the Open Weather API token(OPENWEATHER_API_TOKEN)")
 	}
+	var url string
+	var location string
+	var err error
+
+	if lat != 0 && lon != 0 {
+		url = FormatURLByCoordinates(float32(lat), float32(lon), token)
+	} else {
+		location, err = LocationFromArgs(flag.Args())
+		if err != nil {
+			log.Fatal(err)
+		}
+		url = FormatURLByLocation(location, token)
+	}
+
 	clientConfig := ClientConfig{
-		Token:      token,
-		Unit:       unit,
-		LongFormat: long,
+		Token:          token,
+		Unit:           unit,
+		DetailedFormat: detailed,
 	}
 	client := NewClient(clientConfig)
-	url := FormatURL(location, token)
+
 	cond, err := client.Current(url)
 	if err != nil {
 		log.Fatal(err)

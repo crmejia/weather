@@ -70,8 +70,12 @@ func (c *Conditions) Convert() {
 
 }
 
-func FormatURL(location, token string) string {
+func FormatURLByLocation(location, token string) string {
 	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", location, token)
+}
+
+func FormatURLByCoordinates(lat, lon float32, token string) string {
+	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?lat=%.2f&lon=%.2f&appid=%s", lat, lon, token)
 }
 
 func ParseJSON(r io.Reader) Conditions {
@@ -115,24 +119,24 @@ func LocationFromArgs(input []string) (string, error) {
 }
 
 type ClientConfig struct {
-	Token      string
-	Unit       string
-	LongFormat bool
+	Token          string
+	Unit           string
+	DetailedFormat bool
 }
 
 type Client struct {
-	token      string
-	HttpClient http.Client
-	unit       string
-	LongFormat bool
+	token          string
+	HttpClient     http.Client
+	unit           string
+	DetailedFormat bool
 }
 
 func NewClient(config ClientConfig) Client {
 	return Client{
-		token:      config.Token,
-		unit:       config.Unit,
-		HttpClient: http.Client{},
-		LongFormat: config.LongFormat,
+		token:          config.Token,
+		unit:           config.Unit,
+		HttpClient:     http.Client{},
+		DetailedFormat: config.DetailedFormat,
 	}
 }
 
@@ -147,7 +151,7 @@ func (c Client) Current(url string) (Conditions, error) {
 	}
 	cond := ParseJSON(resp.Body)
 	cond.Unit = c.unit
-	cond.LongFormat = c.LongFormat
+	cond.LongFormat = c.DetailedFormat
 	cond.Convert()
 	return cond, nil
 }
