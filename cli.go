@@ -14,6 +14,8 @@ const (
 	detailed_usage        = "gives more weather details"
 	coord_usage           = "use coordinates to determine weather"
 	shorthand             = " (shorthand)"
+	help_intro            = `Weather is a Go library package and accompanying command-line tool that will (briefly) report the current weather conditions for a given location.
+    weather <options> location`
 )
 
 func RunCLI() {
@@ -33,6 +35,11 @@ func RunCLI() {
 	flag.Float64Var(&lat, "lat", 0, coord_usage+shorthand)
 
 	flag.Parse()
+	if len(os.Args) == 1 {
+		fmt.Println(help_intro)
+		flag.Usage()
+		return
+	}
 	unit = strings.ToLower(unit)
 	if unit != FAHRENHEIT && unit != "f" && unit != KELVIN && unit != "k" {
 		unit = CELCIUS
