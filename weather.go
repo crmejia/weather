@@ -14,25 +14,39 @@ type responseJSON struct {
 	Coordinates coordinates `json:"coord"`
 	Weather     []weather   `json:"weather"`
 	Main        main        `json:"main"`
+	Name        string
 }
 type coordinates struct {
 	Longitude float32 `json:"lon"`
 	Latitude  float32 `json:"lat"`
 }
 type weather struct {
-	Description string `json:"main"`
+	Main        string `json:"main"`
+	Description string `json:"description"`
 }
 type main struct {
-	Temp float32
+	Temp    float32
+	TempMin float32 `json:"temp_min"`
+	TempMax float32 `json:"temp_max"`
 }
 type Conditions struct {
+	Name        string
 	Summary     string
 	Temperature float32
 	Unit        string
+	LongFormat  bool
+	Longitude   float32
+	Latitude    float32
+	Description string
+	TempMin     float32
+	TempMax     float32
 }
 
 func (c Conditions) String() string {
 	unit := strings.ToUpper(c.Unit[0:1])
+	if c.LongFormat {
+		return fmt.Sprintf("%s %.1fº%s\n%s min %.1fº%s, max %.1fº%s", c.Name, c.Temperature, unit, c.Description, c.TempMin, unit, c.TempMax, unit)
+	}
 	return fmt.Sprintf("%s %.1fº%s", c.Summary, c.Temperature, unit)
 }
 
@@ -46,8 +60,12 @@ const (
 func (c *Conditions) Convert() {
 	if c.Unit == "c" || c.Unit == CELCIUS {
 		c.Temperature -= kelvinToCelcius
+		c.TempMin -= kelvinToCelcius
+		c.TempMax -= kelvinToCelcius
 	} else if c.Unit == "f" || c.Unit == FAHRENHEIT {
 		c.Temperature = (c.Temperature-kelvinToCelcius)*9/5 + 32
+		c.TempMin = (c.Temperature-kelvinToCelcius)*9/5 + 32
+		c.TempMax = (c.Temperature-kelvinToCelcius)*9/5 + 32
 	}
 
 }
@@ -65,8 +83,14 @@ func ParseJSON(r io.Reader) Conditions {
 		return Conditions{}
 	}
 	var cond Conditions
-	cond.Summary = resp.Weather[0].Description
+	cond.Name = resp.Name
+	cond.Summary = resp.Weather[0].Main
 	cond.Temperature = resp.Main.Temp
+	cond.Longitude = resp.Coordinates.Longitude
+	cond.Latitude = resp.Coordinates.Latitude
+	cond.Description = resp.Weather[0].Description
+	cond.TempMin = resp.Main.TempMin
+	cond.TempMax = resp.Main.TempMax
 
 	return cond
 }
@@ -91,14 +115,16 @@ func LocationFromArgs(input []string) (string, error) {
 }
 
 type ClientConfig struct {
-	Token string
-	Unit  string
+	Token      string
+	Unit       string
+	LongFormat bool
 }
 
 type Client struct {
 	token      string
 	HttpClient http.Client
 	unit       string
+	LongFormat bool
 }
 
 func NewClient(config ClientConfig) Client {
@@ -106,6 +132,7 @@ func NewClient(config ClientConfig) Client {
 		token:      config.Token,
 		unit:       config.Unit,
 		HttpClient: http.Client{},
+		LongFormat: config.LongFormat,
 	}
 }
 
@@ -120,6 +147,7 @@ func (c Client) Current(url string) (Conditions, error) {
 	}
 	cond := ParseJSON(resp.Body)
 	cond.Unit = c.unit
+	cond.LongFormat = c.LongFormat
 	cond.Convert()
 	return cond, nil
 }

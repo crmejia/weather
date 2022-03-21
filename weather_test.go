@@ -34,8 +34,16 @@ func TestParseJSON(t *testing.T) {
 	want := weather.Conditions{
 		Summary:     "Drizzle",
 		Temperature: 7.17,
+		Unit:        weather.CELCIUS,
+		Longitude:   -0.13,
+		Latitude:    51.51,
+		Description: "light intensity drizzle",
+		TempMin:     6,
+		TempMax:     8,
 	}
 	got := weather.ParseJSON(f)
+	got.Unit = weather.CELCIUS
+	got.Convert()
 	if !cmp.Equal(want, got, cmpopts.EquateApprox(0, 0.001)) {
 		t.Error(cmp.Diff(want, got))
 	}
@@ -81,6 +89,33 @@ func TestStringerOnConditions(t *testing.T) {
 		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.CELCIUS}, want: "Drizzle 7.2ºC"},
 		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.FAHRENHEIT}, want: "Drizzle 7.2ºF"},
 		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.KELVIN}, want: "Drizzle 7.2ºK"},
+	}
+
+	for _, tc := range testCases {
+		got := fmt.Sprint(tc.cond)
+		if tc.want != got {
+			t.Errorf("want %q, got %q", tc.want, got)
+		}
+	}
+}
+
+func TestStringerOnConditionsWithLongFormat(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		cond weather.Conditions
+		want string
+	}{
+		{cond: weather.Conditions{
+			LongFormat:  true,
+			Name:        "Santo Domingo",
+			Description: "light intensity drizzle",
+			Temperature: 27.2,
+			Longitude:   -23.4,
+			Latitude:    43.51,
+			TempMin:     22,
+			TempMax:     30.3,
+			Unit:        "c"},
+			want: "Santo Domingo 27.2ºC\nlight intensity drizzle min 22.0ºC, max 30.3ºC"},
 	}
 
 	for _, tc := range testCases {
