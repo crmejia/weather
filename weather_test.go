@@ -45,9 +45,10 @@ func TestParseJSON(t *testing.T) {
 	}
 	defer f.Close()
 	want := weather.Conditions{
+		Name:        "London",
 		Summary:     "Drizzle",
 		Temperature: 7.17,
-		Unit:        weather.CELCIUS,
+		Unit:        weather.Celsius,
 		Longitude:   -0.13,
 		Latitude:    51.51,
 		Description: "light intensity drizzle",
@@ -55,7 +56,7 @@ func TestParseJSON(t *testing.T) {
 		TempMax:     8,
 	}
 	got := weather.ParseJSON(f)
-	got.Unit = weather.CELCIUS
+	got.Unit = weather.Celsius
 	got.Convert()
 	if !cmp.Equal(want, got, cmpopts.EquateApprox(0, 0.001)) {
 		t.Error(cmp.Diff(want, got))
@@ -99,9 +100,9 @@ func TestStringerOnConditions(t *testing.T) {
 		want string
 	}{
 		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: "c"}, want: "Drizzle 7.2ºC"},
-		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.CELCIUS}, want: "Drizzle 7.2ºC"},
-		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.FAHRENHEIT}, want: "Drizzle 7.2ºF"},
-		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.KELVIN}, want: "Drizzle 7.2ºK"},
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.Celsius}, want: "Drizzle 7.2ºC"},
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.Fahrenheit}, want: "Drizzle 7.2ºF"},
+		{cond: weather.Conditions{Summary: "Drizzle", Temperature: 7.2, Unit: weather.Kelvin}, want: "Drizzle 7.2ºK"},
 	}
 
 	for _, tc := range testCases {
@@ -141,6 +142,7 @@ func TestStringerOnConditionsWithLongFormat(t *testing.T) {
 
 var dummyClientConfig = weather.ClientConfig{
 	Token: "dummy_token",
+	Unit:  "c",
 }
 
 func TestConditionsConvertToAppropiateUnit(t *testing.T) {
@@ -150,11 +152,11 @@ func TestConditionsConvertToAppropiateUnit(t *testing.T) {
 		want float32
 	}{
 		{cond: weather.Conditions{Temperature: 300, Unit: "c"}, want: 26.85},
-		{cond: weather.Conditions{Temperature: 300, Unit: weather.CELCIUS}, want: 26.85},
+		{cond: weather.Conditions{Temperature: 300, Unit: weather.Celsius}, want: 26.85},
 		{cond: weather.Conditions{Temperature: 300, Unit: "k"}, want: 300},
-		{cond: weather.Conditions{Temperature: 300, Unit: weather.KELVIN}, want: 300},
+		{cond: weather.Conditions{Temperature: 300, Unit: weather.Kelvin}, want: 300},
 		{cond: weather.Conditions{Temperature: 300, Unit: "f"}, want: 80.33},
-		{cond: weather.Conditions{Temperature: 300, Unit: weather.FAHRENHEIT}, want: 80.33},
+		{cond: weather.Conditions{Temperature: 300, Unit: weather.Fahrenheit}, want: 80.33},
 	}
 
 	for _, tc := range testCases {

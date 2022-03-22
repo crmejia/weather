@@ -10,25 +10,6 @@ import (
 	"strings"
 )
 
-type responseJSON struct {
-	Coordinates coordinates `json:"coord"`
-	Weather     []weather   `json:"weather"`
-	Main        main        `json:"main"`
-	Name        string
-}
-type coordinates struct {
-	Longitude float32 `json:"lon"`
-	Latitude  float32 `json:"lat"`
-}
-type weather struct {
-	Main        string `json:"main"`
-	Description string `json:"description"`
-}
-type main struct {
-	Temp    float32
-	TempMin float32 `json:"temp_min"`
-	TempMax float32 `json:"temp_max"`
-}
 type Conditions struct {
 	Name        string
 	Summary     string
@@ -42,27 +23,12 @@ type Conditions struct {
 	TempMax     float32
 }
 
-func (c Conditions) String() string {
-	unit := strings.ToUpper(c.Unit[0:1])
-	if c.LongFormat {
-		return fmt.Sprintf("%s %.1fº%s\n%s min %.1fº%s, max %.1fº%s", c.Name, c.Temperature, unit, c.Description, c.TempMin, unit, c.TempMax, unit)
-	}
-	return fmt.Sprintf("%s %.1fº%s", c.Summary, c.Temperature, unit)
-}
-
-const kelvinToCelcius = 273.1500
-const (
-	CELCIUS    = "celcius"
-	FAHRENHEIT = "fahrenheit"
-	KELVIN     = "kelvin"
-)
-
 func (c *Conditions) Convert() {
-	if c.Unit == "c" || c.Unit == CELCIUS {
+	if c.Unit == "c" || c.Unit == Celsius {
 		c.Temperature -= kelvinToCelcius
 		c.TempMin -= kelvinToCelcius
 		c.TempMax -= kelvinToCelcius
-	} else if c.Unit == "f" || c.Unit == FAHRENHEIT {
+	} else if c.Unit == "f" || c.Unit == Fahrenheit {
 		c.Temperature = (c.Temperature-kelvinToCelcius)*9/5 + 32
 		c.TempMin = (c.Temperature-kelvinToCelcius)*9/5 + 32
 		c.TempMax = (c.Temperature-kelvinToCelcius)*9/5 + 32
@@ -70,6 +36,18 @@ func (c *Conditions) Convert() {
 
 }
 
+func (c Conditions) String() string {
+	var unit string
+	if c.Unit != "" {
+		unit = strings.ToUpper(c.Unit[0:1])
+	} else {
+		unit = "C"
+	}
+	if c.LongFormat {
+		return fmt.Sprintf("%s %.1fº%s\n%s min %.1fº%s, max %.1fº%s", c.Name, c.Temperature, unit, c.Description, c.TempMin, unit, c.TempMax, unit)
+	}
+	return fmt.Sprintf("%s %.1fº%s", c.Summary, c.Temperature, unit)
+}
 func FormatURLByLocation(location, token string) string {
 	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", location, token)
 }
@@ -86,12 +64,15 @@ func ParseJSON(r io.Reader) Conditions {
 		log.Println(err)
 		return Conditions{}
 	}
+	if len(resp.Weather) == 0 {
+		log.Fatal("malformed response")
+	}
 	var cond Conditions
 	cond.Name = resp.Name
 	cond.Summary = resp.Weather[0].Main
 	cond.Temperature = resp.Main.Temp
-	cond.Longitude = resp.Coordinates.Longitude
-	cond.Latitude = resp.Coordinates.Latitude
+	cond.Longitude = resp.Coord.Lon
+	cond.Latitude = resp.Coord.Lat
 	cond.Description = resp.Weather[0].Description
 	cond.TempMin = resp.Main.TempMin
 	cond.TempMax = resp.Main.TempMax
@@ -149,9 +130,39 @@ func (c Client) Current(url string) (Conditions, error) {
 	if err != nil {
 		return Conditions{}, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return Conditions{}, fmt.Errorf("received HTTP status %d on request", resp.StatusCode)
+	}
 	cond := ParseJSON(resp.Body)
 	cond.Unit = c.unit
 	cond.LongFormat = c.DetailedFormat
 	cond.Convert()
 	return cond, nil
 }
+
+type responseJSON struct {
+	Coord   coordinates
+	Weather []weather
+	Main    main
+	Name    string
+}
+type coordinates struct {
+	Lon float32
+	Lat float32
+}
+type weather struct {
+	Main        string
+	Description string
+}
+type main struct {
+	Temp    float32
+	TempMin float32 `json:"temp_min"`
+	TempMax float32 `json:"temp_max"`
+}
+
+const kelvinToCelcius = 273.1500
+const (
+	Celsius    = "celcius"
+	Fahrenheit = "fahrenheit"
+	Kelvin     = "kelvin"
+)
