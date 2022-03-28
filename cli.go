@@ -10,7 +10,7 @@ import (
 
 const (
 	openweather_api_token = "OPENWEATHER_API_TOKEN"
-	unit_usage            = "set the unit: Celsius(default), Fahrenheit, kelvin"
+	unit_usage            = "set the Unit: Celsius(default), Fahrenheit, kelvin"
 	detailed_usage        = "gives more weather details"
 	coord_usage           = "use coordinates to determine weather"
 	shorthand             = " (shorthand)"
@@ -20,7 +20,7 @@ const (
 
 func RunCLI() {
 	var unit string
-	flag.StringVar(&unit, "unit", Celsius, unit_usage)
+	flag.StringVar(&unit, "Unit", Celsius, unit_usage)
 	flag.StringVar(&unit, "u", Celsius, unit_usage+shorthand)
 
 	var detailed bool

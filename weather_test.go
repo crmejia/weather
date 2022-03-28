@@ -178,6 +178,23 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestNewClientSetsDefaultUnitAsCelsius(t *testing.T) {
+	t.Parallel()
+	testConfigs := []weather.ClientConfig{
+		weather.ClientConfig{Token: "dummy"},
+		weather.ClientConfig{Token: "dummy", Unit: "gibberish"},
+	}
+	for _, testConfig := range testConfigs {
+		client := weather.NewClient(testConfig)
+		want := weather.Celsius
+		got := client.Unit
+
+		if want != got {
+			t.Errorf("want unit %s, got %s", want, got)
+		}
+	}
+}
+
 func TestClient_Current(t *testing.T) {
 	t.Parallel()
 	ts := httptest.NewTLSServer(http.HandlerFunc(LoadLondonJSON))
@@ -204,3 +221,32 @@ func LoadLondonJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Write(fileBytes)
 }
+
+//
+//func TestCacheRetrieve(t *testing.T) {
+//	reader := "reader" //TODO json conditions
+//
+//}
+
+//func TestCacheRetrieveReturnsErrorOnCacheMiss(t *testing.T) {
+//	t.Parallel()
+//	_, err := weather.CacheRetrieve("dummy")
+//	if err == nil {
+//		t.Errorf("expected retrieve to fail on non-existent item")
+//	}
+//}
+//
+//func TestCacheAddSavesToTmpFile(t *testing.T) {
+//	t.Parallel()
+//	key := "test"
+//	cond := weather.Conditions{Name: "test"}
+//	weather.CacheAdd(key, cond)
+//
+//	_, err := os.Stat(os.TempDir() + key)
+//	if err == os.ErrNotExist {
+//		t.Errorf("want conditions to be cached")
+//	}
+//}
+
+//func TestCacheIsRetrieved
+//func TestCacheRemovesStale

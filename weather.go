@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -108,14 +110,19 @@ type ClientConfig struct {
 type Client struct {
 	token          string
 	HttpClient     http.Client
-	unit           string
+	Unit           string
 	DetailedFormat bool
 }
 
 func NewClient(config ClientConfig) Client {
+	config.Unit = strings.ToLower(config.Unit)
+
+	if config.Unit == "" || (config.Unit != Fahrenheit && config.Unit != "f" && config.Unit != Kelvin && config.Unit != "k") {
+		config.Unit = Celsius
+	}
 	return Client{
 		token:          config.Token,
-		unit:           config.Unit,
+		Unit:           config.Unit,
 		HttpClient:     http.Client{},
 		DetailedFormat: config.DetailedFormat,
 	}
@@ -134,10 +141,54 @@ func (c Client) Current(url string) (Conditions, error) {
 		return Conditions{}, fmt.Errorf("received HTTP status %d on request", resp.StatusCode)
 	}
 	cond := ParseJSON(resp.Body)
-	cond.Unit = c.unit
+	cond.Unit = c.Unit
 	cond.LongFormat = c.DetailedFormat
 	cond.Convert()
 	return cond, nil
+}
+
+func CacheRetrieve(key string) ([]byte, error) {
+	tempDir := os.TempDir()
+	f, err := os.Open(tempDir + key)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fileBytes, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileBytes, nil
+}
+
+func ParseCache(b []byte) Conditions {
+	cond := Conditions{}
+
+	err := json.Unmarshal(b, &cond)
+	if err != nil {
+		return cond
+	}
+	return cond
+}
+
+func CacheAdd(key string, marshalCond []byte) error {
+	f, err := os.Create(os.TempDir() + key)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	//marshalCond, err := json.Marshal(cond)
+	//if err != nil {
+	//	return err
+	//}
+	_, err = f.Write(marshalCond)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type responseJSON struct {
@@ -162,7 +213,7 @@ type main struct {
 
 const kelvinToCelcius = 273.1500
 const (
-	Celsius    = "celcius"
+	Celsius    = "celsius"
 	Fahrenheit = "fahrenheit"
 	Kelvin     = "kelvin"
 )
