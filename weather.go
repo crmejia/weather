@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type Conditions struct {
@@ -23,6 +24,7 @@ type Conditions struct {
 	Description string
 	TempMin     float32
 	TempMax     float32
+	CacheTime   time.Time
 }
 
 func (c *Conditions) Convert() {
@@ -163,13 +165,20 @@ func CacheRetrieve(key string) ([]byte, error) {
 	return fileBytes, nil
 }
 
+const cacheDuration = time.Minute * 15
+
 func ParseCache(b []byte) Conditions {
 	cond := Conditions{}
-
 	err := json.Unmarshal(b, &cond)
 	if err != nil {
-		return cond
+		return Conditions{}
 	}
+
+	t := time.Now()
+	if t.Sub(cond.CacheTime) > cacheDuration {
+		return Conditions{}
+	}
+	
 	return cond
 }
 

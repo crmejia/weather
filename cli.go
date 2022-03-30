@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 )
 
 const (
@@ -34,20 +33,18 @@ func RunCLI() {
 	flag.Float64Var(&lat, "latitude", 0, coord_usage)
 	flag.Float64Var(&lat, "lat", 0, coord_usage+shorthand)
 
-	flag.Parse()
 	if len(os.Args) == 1 {
 		fmt.Println(help_intro)
 		flag.Usage()
 		return
 	}
-	unit = strings.ToLower(unit)
-	if unit != Fahrenheit && unit != "f" && unit != Kelvin && unit != "k" {
-		unit = Celsius
-	}
+	flag.Parse()
+
 	token := os.Getenv(openweather_api_token)
 	if token == "" {
 		log.Fatal("please set the Open Weather API token(OPENWEATHER_API_TOKEN)")
 	}
+
 	var url string
 	var location string
 	var err error

@@ -1,6 +1,7 @@
 package weather_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -10,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 	"weather"
 )
 
@@ -220,6 +222,35 @@ func LoadLondonJSON(w http.ResponseWriter, r *http.Request) {
 	fileBytes, _ := ioutil.ReadAll(f)
 
 	w.Write(fileBytes)
+}
+
+func TestParseCacheSkipsStaleConditions(t *testing.T) {
+	t.Parallel()
+	marshalCond, _ := json.Marshal(weather.Conditions{
+		CacheTime: time.Date(1970, time.January, 1, 0, 0, 0, 0, &time.Location{}),
+	})
+	want := weather.Conditions{}
+	got := weather.ParseCache(marshalCond)
+	if !cmp.Equal(want, got, cmpopts.EquateApprox(0, 0.001)) {
+		t.Error("stale cache shouldn't be parsed ")
+	}
+}
+
+func TestParseCacheFreshConditions(t *testing.T) {
+	t.Parallel()
+	timeNow := time.Now()
+	marshalCond, _ := json.Marshal(weather.Conditions{
+		Name:      "test",
+		CacheTime: timeNow,
+	})
+	want := weather.Conditions{
+		Name:      "test",
+		CacheTime: timeNow,
+	}
+	got := weather.ParseCache(marshalCond)
+	if !cmp.Equal(want, got, cmpopts.EquateApprox(0, 0.001)) {
+		t.Error("stale cache shouldn't be parsed ")
+	}
 }
 
 //
