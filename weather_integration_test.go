@@ -16,11 +16,12 @@ func TestConditionsIntegration(t *testing.T) {
 		t.Skip("Please set a valid API key in the environment variable OPENWEATHER_API_TOKEN")
 	}
 	clientConfig := weather.ClientConfig{
-		Token: token,
+		Token:    token,
+		Location: "London",
 	}
 	wClient := weather.NewClient(clientConfig)
-	url := weather.FormatURLByLocation("London", token)
-	cond, err := wClient.Current(url)
+
+	cond, err := wClient.Current()
 	if err != nil {
 		t.Fatal(err)
 	}

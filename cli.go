@@ -45,28 +45,26 @@ func RunCLI() {
 		log.Fatal("please set the Open Weather API token(OPENWEATHER_API_TOKEN)")
 	}
 
-	var url string
-	var location string
+	location := ""
 	var err error
-
-	if lat != 0 && lon != 0 {
-		url = FormatURLByCoordinates(float32(lat), float32(lon), token)
-	} else {
+	if lat == 0 && lon == 0 {
 		location, err = LocationFromArgs(flag.Args())
 		if err != nil {
 			log.Fatal(err)
 		}
-		url = FormatURLByLocation(location, token)
 	}
 
 	clientConfig := ClientConfig{
 		Token:          token,
 		Unit:           unit,
 		DetailedFormat: detailed,
+		Location:       location,
+		Lat:            lat,
+		Lon:            lon,
 	}
 	client := NewClient(clientConfig)
 
-	cond, err := client.Current(url)
+	cond, err := client.Current()
 	if err != nil {
 		log.Fatal(err)
 	}

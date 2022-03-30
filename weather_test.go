@@ -202,8 +202,9 @@ func TestClient_Current(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(LoadLondonJSON))
 
 	wclient := weather.NewClient(dummyClientConfig)
+	wclient.Url = ts.URL
 	wclient.HttpClient = *ts.Client()
-	cond, _ := wclient.Current(ts.URL)
+	cond, _ := wclient.Current()
 
 	want := "Drizzle 7.2ºC"
 	got := cond.String()

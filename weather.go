@@ -107,6 +107,8 @@ type ClientConfig struct {
 	Token          string
 	Unit           string
 	DetailedFormat bool
+	Location       string
+	Lat, Lon       float64
 }
 
 type Client struct {
@@ -114,6 +116,7 @@ type Client struct {
 	HttpClient     http.Client
 	Unit           string
 	DetailedFormat bool
+	Url            string
 }
 
 func NewClient(config ClientConfig) Client {
@@ -122,11 +125,20 @@ func NewClient(config ClientConfig) Client {
 	if config.Unit == "" || (config.Unit != Fahrenheit && config.Unit != "f" && config.Unit != Kelvin && config.Unit != "k") {
 		config.Unit = Celsius
 	}
+
+	var url string
+	if config.Lat != 0 && config.Lon != 0 {
+		url = FormatURLByCoordinates(float32(config.Lat), float32(config.Lon), config.Token)
+	} else {
+		url = FormatURLByLocation(config.Location, config.Token)
+	}
+
 	return Client{
 		token:          config.Token,
 		Unit:           config.Unit,
 		HttpClient:     http.Client{},
 		DetailedFormat: config.DetailedFormat,
+		Url:            url,
 	}
 }
 
@@ -134,8 +146,8 @@ func (c Client) Token() string {
 	return c.token
 }
 
-func (c Client) Current(url string) (Conditions, error) {
-	resp, err := c.HttpClient.Get(url)
+func (c Client) Current() (Conditions, error) {
+	resp, err := c.HttpClient.Get(c.Url)
 	if err != nil {
 		return Conditions{}, err
 	}
@@ -178,7 +190,7 @@ func ParseCache(b []byte) Conditions {
 	if t.Sub(cond.CacheTime) > cacheDuration {
 		return Conditions{}
 	}
-	
+
 	return cond
 }
 
