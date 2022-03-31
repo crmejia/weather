@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -117,6 +118,7 @@ type Client struct {
 	Unit           string
 	DetailedFormat bool
 	Url            string
+	CacheKey       string
 }
 
 func NewClient(config ClientConfig) Client {
@@ -126,11 +128,15 @@ func NewClient(config ClientConfig) Client {
 		config.Unit = Celsius
 	}
 
-	var url string
+	var url, cacheKey string
 	if config.Lat != 0 && config.Lon != 0 {
 		url = FormatURLByCoordinates(float32(config.Lat), float32(config.Lon), config.Token)
+		latString := strconv.Itoa(int(config.Lat))
+		lonString := strconv.Itoa(int(config.Lon))
+		cacheKey = latString + lonString
 	} else {
 		url = FormatURLByLocation(config.Location, config.Token)
+		cacheKey = config.Location
 	}
 
 	return Client{
@@ -139,6 +145,7 @@ func NewClient(config ClientConfig) Client {
 		HttpClient:     http.Client{},
 		DetailedFormat: config.DetailedFormat,
 		Url:            url,
+		CacheKey:       cacheKey,
 	}
 }
 
@@ -147,34 +154,43 @@ func (c Client) Token() string {
 }
 
 func (c Client) Current() (Conditions, error) {
-	resp, err := c.HttpClient.Get(c.Url)
-	if err != nil {
-		return Conditions{}, err
+	cacheEntry := CacheRetrieve(c.CacheKey)
+	cond := ParseCache(cacheEntry)
+	if cond.Summary == "" {
+		resp, err := c.HttpClient.Get(c.Url)
+		if err != nil {
+			return Conditions{}, err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return Conditions{}, fmt.Errorf("received HTTP status %d on request", resp.StatusCode)
+		}
+		cond = ParseJSON(resp.Body)
+		cond.Unit = c.Unit
+		cond.LongFormat = c.DetailedFormat
+
+		cond.Convert()
+		//caching
+		cond.CacheTime = time.Now()
+		marshalCond, _ := json.Marshal(cond)
+		CacheAdd(c.CacheKey, marshalCond)
 	}
-	if resp.StatusCode != http.StatusOK {
-		return Conditions{}, fmt.Errorf("received HTTP status %d on request", resp.StatusCode)
-	}
-	cond := ParseJSON(resp.Body)
-	cond.Unit = c.Unit
-	cond.LongFormat = c.DetailedFormat
-	cond.Convert()
 	return cond, nil
 }
 
-func CacheRetrieve(key string) ([]byte, error) {
+func CacheRetrieve(key string) []byte {
 	tempDir := os.TempDir()
 	f, err := os.Open(tempDir + key)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	defer f.Close()
 
 	fileBytes, err := ioutil.ReadAll(f)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
-	return fileBytes, nil
+	return fileBytes
 }
 
 const cacheDuration = time.Minute * 15
@@ -201,11 +217,19 @@ func CacheAdd(key string, marshalCond []byte) error {
 	}
 	defer f.Close()
 
-	//marshalCond, err := json.Marshal(cond)
-	//if err != nil {
-	//	return err
-	//}
 	_, err = f.Write(marshalCond)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CacheDelete(key string) error {
+	if key == "" {
+		return errors.New("empty key")
+	}
+
+	err := os.Remove(os.TempDir() + key)
 	if err != nil {
 		return err
 	}
